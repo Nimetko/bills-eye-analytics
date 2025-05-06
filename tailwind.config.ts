@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Add custom colors for the dashboard
+				'parliament-blue': '#1A1F2C',
+				'parliament-purple': '#9b87f5',
+				'parliament-light-purple': '#D6BCFA',
+				'parliament-soft-gray': '#F1F0FB',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
