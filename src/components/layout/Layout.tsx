@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { useSidebar } from "./SidebarContext";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Bell, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, User, Search } from "lucide-react";
 
 export default function Layout() {
   const { collapsed, toggleCollapsed } = useSidebar();

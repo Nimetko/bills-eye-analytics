@@ -3,7 +3,7 @@ import { useSidebar } from "./SidebarContext";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  Dashboard,
+  LayoutDashboard,
   FileText,
   ChartBar,
   Search,
@@ -20,7 +20,7 @@ export function AppSidebar() {
   const menuItems = [
     {
       title: "Dashboard",
-      icon: Dashboard,
+      icon: LayoutDashboard,
       path: "/",
     },
     {
