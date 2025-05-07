@@ -9,7 +9,7 @@ import {
   TripletData
 } from '@/services/KnowledgeGraphData';
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, RefreshCw, Database } from "lucide-react";
+import { FileText, Upload, RefreshCw, Database, Maximize2, Minimize2 } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { fetchBills, convertBillsToGraphData } from '@/services/billsService';
 import { useToast } from '@/components/ui/use-toast';
@@ -66,7 +66,13 @@ export function KnowledgeGraph() {
   const [isUsingServer, setIsUsingServer] = useState<boolean>(false);
   const [isUsingCustomData, setIsUsingCustomData] = useState<boolean>(true);
   const [simulationRunning, setSimulationRunning] = useState<boolean>(true);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Auto-pause on interaction
+  const [userInteracting, setUserInteracting] = useState<boolean>(false);
+  const interactionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Fetch bills from Supabase
   const { data: bills, isLoading: isLoadingSupabase, error: supabaseError, refetch } = useQuery({
@@ -167,6 +173,69 @@ export function KnowledgeGraph() {
     setSimulationRunning(!simulationRunning);
   };
   
+  // Toggle fullscreen
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    
+    if (!isFullscreen) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen();
+      }
+      setIsFullscreen(true);
+      setSimulationRunning(false); // Auto-pause when entering fullscreen
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+  
+  // Listen for fullscreen change events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      if (!document.fullscreenElement) {
+        setSimulationRunning(true); // Resume when exiting fullscreen
+      }
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+  
+  // Auto-pause on user interaction
+  const handleUserInteraction = () => {
+    if (!userInteracting) {
+      setUserInteracting(true);
+      setSimulationRunning(false);
+    }
+    
+    // Reset the timeout
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+    }
+    
+    // Set a new timeout - will resume simulation after 5 seconds of no interaction
+    interactionTimeoutRef.current = setTimeout(() => {
+      setUserInteracting(false);
+      if (!isFullscreen) {
+        setSimulationRunning(true);
+      }
+    }, 5000);
+  };
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
+      }
+    };
+  }, []);
+  
   // Generate colors based on node type
   const getNodeColor = (node: Node) => {
     switch (node.type) {
@@ -179,7 +248,8 @@ export function KnowledgeGraph() {
   };
   
   const getNodeRadius = (node: Node) => {
-    return node.type === 'bill' ? 15 : 10;
+    // Larger nodes for better visibility
+    return node.type === 'bill' ? 20 : 15;
   };
   
   // Force-directed graph rendering
@@ -195,11 +265,11 @@ export function KnowledgeGraph() {
       svgElement.removeChild(svgElement.firstChild);
     }
     
-    // Create a simple force-directed graph
+    // Create a simple force-directed graph with wider initial distribution
     const nodes: NodeWithPosition[] = graphData.nodes.map(node => ({
       ...node,
-      x: Math.random() * width * 0.8 + width * 0.1, // Better initial distribution
-      y: Math.random() * height * 0.8 + height * 0.1,
+      x: Math.random() * width * 0.9 + width * 0.05, // Wider distribution
+      y: Math.random() * height * 0.9 + height * 0.05,
       vx: 0,
       vy: 0,
       fixed: false
@@ -280,9 +350,9 @@ export function KnowledgeGraph() {
       // Add label to circle - first letters only for cleaner look
       if (node.type === 'bill') {
         const innerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        innerText.setAttribute('font-size', '10px');
+        innerText.setAttribute('font-size', '12px');
         innerText.setAttribute('text-anchor', 'middle');
-        innerText.setAttribute('dy', '3px');
+        innerText.setAttribute('dy', '4px');
         innerText.setAttribute('fill', 'white');
         innerText.setAttribute('font-weight', 'bold');
         innerText.textContent = node.label && node.label.length > 0 
@@ -294,9 +364,9 @@ export function KnowledgeGraph() {
       
       // Add full label below node
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('font-size', node.type === 'bill' ? '10px' : '9px');
+      label.setAttribute('font-size', node.type === 'bill' ? '12px' : '10px');
       label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('dy', node.type === 'bill' ? '24px' : '18px');
+      label.setAttribute('dy', node.type === 'bill' ? '30px' : '24px');
       label.setAttribute('fill', '#333');
       
       // Truncate long labels
@@ -315,6 +385,7 @@ export function KnowledgeGraph() {
         circle.setAttribute('r', (getNodeRadius(node) * 1.2).toString());
         label.setAttribute('font-weight', 'bold');
         label.setAttribute('opacity', '1');
+        handleUserInteraction();
       });
       
       group.addEventListener('mouseout', () => {
@@ -337,6 +408,7 @@ export function KnowledgeGraph() {
       group.addEventListener('mousedown', (e) => {
         e.preventDefault();
         isDragging = true;
+        handleUserInteraction();
         
         const onMouseMove = (moveEvent: MouseEvent) => {
           if (!isDragging) return;
@@ -372,6 +444,8 @@ export function KnowledgeGraph() {
               text.setAttribute('y', midY.toString());
             }
           });
+          
+          handleUserInteraction();
         };
         
         const onMouseUp = () => {
@@ -390,6 +464,19 @@ export function KnowledgeGraph() {
       group.dataset.nodeId = node.id;
     });
     
+    // Initial spread - push nodes more to the edges
+    for (let i = 0; i < 50; i++) {
+      nodes.forEach(node => {
+        const dx = node.x - width/2;
+        const dy = node.y - height/2;
+        const distance = Math.sqrt(dx*dx + dy*dy);
+        if (distance < width/3) {
+          node.x += dx * 0.03;
+          node.y += dy * 0.03;
+        }
+      });
+    }
+    
     // Simple physics simulation - with reduced forces for stability
     let animationId: number;
     const simulation = () => {
@@ -400,9 +487,9 @@ export function KnowledgeGraph() {
       
       // Update node positions with simple force-directed algorithm
       // Reduced force values for more stability
-      const repulsionForce = 0.4;  // Reduced from 0.8
-      const attractionForce = 0.005; // Reduced from 0.01
-      const centerForce = 0.002;    // Reduced from 0.01
+      const repulsionForce = 0.3;  // Reduced for calmer movement
+      const attractionForce = 0.001; // Reduced for calmer movement
+      const centerForce = 0.001;    // Reduced for calmer movement
       
       // Apply repulsion between nodes
       for (let i = 0; i < nodes.length; i++) {
@@ -441,8 +528,8 @@ export function KnowledgeGraph() {
         const distance = Math.sqrt(dx * dx + dy * dy) || 1;
         
         // Apply optimal distance for edge length
-        const optimalDistance = 120; // Desired distance between connected nodes
-        const forceFactor = (distance - optimalDistance) * 0.001;
+        const optimalDistance = 160; // Desired distance between connected nodes - increased
+        const forceFactor = (distance - optimalDistance) * 0.0005; // Reduced for stability
         
         if (!sourceNode.fixed) {
           sourceNode.vx += dx * forceFactor;
@@ -468,20 +555,21 @@ export function KnowledgeGraph() {
         if (node.fixed) return; // Skip fixed nodes
         
         // Strong dampening for more stability
-        node.vx *= 0.7; // More dampening (was 0.9)
-        node.vy *= 0.7;
+        node.vx *= 0.8; // More dampening for calmer movement
+        node.vy *= 0.8;
         
         // Apply velocity with limits
-        const maxVelocity = 2.0; // Limit maximum velocity
+        const maxVelocity = 1.0; // Lower limit for calmer movement
         node.vx = Math.max(-maxVelocity, Math.min(maxVelocity, node.vx));
         node.vy = Math.max(-maxVelocity, Math.min(maxVelocity, node.vy));
         
         node.x += node.vx;
         node.y += node.vy;
         
-        // Keep nodes within bounds
-        node.x = Math.max(30, Math.min(width - 30, node.x));
-        node.y = Math.max(30, Math.min(height - 30, node.y));
+        // Keep nodes within bounds, but with padding
+        const padding = 40;
+        node.x = Math.max(padding, Math.min(width - padding, node.x));
+        node.y = Math.max(padding, Math.min(height - padding, node.y));
       });
       
       // Update SVG elements
@@ -544,7 +632,9 @@ export function KnowledgeGraph() {
   const error = supabaseError || serverError;
 
   return (
-    <div className="h-full flex flex-col">
+    <div ref={containerRef} className="h-full flex flex-col" 
+         onMouseMove={handleUserInteraction}
+         onTouchMove={handleUserInteraction}>
       <div className="flex space-x-2 mb-4">
         <Badge 
           onClick={() => setActiveTab("entities")} 
@@ -568,6 +658,16 @@ export function KnowledgeGraph() {
           onClick={toggleSimulation}
         >
           {simulationRunning ? "Pause Graph" : "Resume Graph"}
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1"
+          onClick={toggleFullscreen}
+        >
+          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
         </Button>
         
         <div className="flex space-x-2">
@@ -645,6 +745,7 @@ export function KnowledgeGraph() {
               ? "Interactive visualization of custom Parliament Bills data"
               : "Interactive visualization of bills and their relationships"}
             {!simulationRunning && " (paused)"}
+            {userInteracting && " - Graph paused while interacting"}
           </p>
           
           <div className="bg-gray-50 rounded-md flex-1 overflow-hidden">
@@ -653,6 +754,11 @@ export function KnowledgeGraph() {
               width="100%" 
               height="100%" 
               className="w-full h-full"
+              onMouseEnter={() => {
+                if (!isFullscreen) {
+                  handleUserInteraction();
+                }
+              }}
             ></svg>
           </div>
           
@@ -665,7 +771,8 @@ export function KnowledgeGraph() {
           </div>
           
           <p className="text-xs text-gray-400 mt-2 text-center">
-            Hover over nodes and connections to explore relationships. Double-click any node to fix its position.
+            Hover over nodes and connections to explore relationships. Double-click nodes to fix positions. Drag to move nodes.
+            {isFullscreen ? " Click Exit Fullscreen to return to normal view." : " Enter Fullscreen for a better view."}
           </p>
         </>
       )}
