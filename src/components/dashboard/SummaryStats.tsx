@@ -6,36 +6,67 @@ import { supabase } from "@/lib/supabase";
 
 export function SummaryStats() {
   const [totalBills, setTotalBills] = useState<number | null>(null);
+  const [approvedBills, setApprovedBills] = useState<number>(0);
+  const [rejectedBills, setRejectedBills] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchTotalBills() {
+    async function fetchBillsData() {
       try {
-        const { count, error } = await supabase
+        // Get total bill count
+        const { count: totalCount, error: totalError } = await supabase
           .from('all_bills_uk')
           .select('*', { count: 'exact', head: true });
         
-        if (error) {
-          console.error('Error fetching bill count:', error);
+        if (totalError) {
+          console.error('Error fetching bill count:', totalError);
           return;
         }
         
-        setTotalBills(count);
+        // Get approved bills (isAct = true)
+        const { count: approvedCount, error: approvedError } = await supabase
+          .from('all_bills_uk')
+          .select('*', { count: 'exact', head: true })
+          .eq('isAct', true);
+          
+        if (approvedError) {
+          console.error('Error fetching approved bills count:', approvedError);
+          return;
+        }
+        
+        // Get rejected bills (isAct = false)
+        const { count: rejectedCount, error: rejectedError } = await supabase
+          .from('all_bills_uk')
+          .select('*', { count: 'exact', head: true })
+          .eq('isAct', false);
+          
+        if (rejectedError) {
+          console.error('Error fetching rejected bills count:', rejectedError);
+          return;
+        }
+        
+        setTotalBills(totalCount);
+        setApprovedBills(approvedCount || 0);
+        setRejectedBills(rejectedCount || 0);
       } catch (error) {
-        console.error('Error fetching bill count:', error);
+        console.error('Error fetching bill data:', error);
       } finally {
         setLoading(false);
       }
     }
     
-    fetchTotalBills();
+    fetchBillsData();
   }, []);
+
+  // Calculate percentages
+  const approvalRate = totalBills && totalBills > 0 ? Math.round((approvedBills / totalBills) * 100) : 0;
+  const rejectionRate = totalBills && totalBills > 0 ? Math.round((rejectedBills / totalBills) * 100) : 0;
 
   const stats = [
     {
       title: "Total Bills",
       value: loading ? "Loading..." : totalBills?.toString() || "0",
-      change: "+12% from last period",
+      change: "All parliamentary bills",
       icon: FileText,
       color: "text-blue-500",
     },
@@ -48,15 +79,15 @@ export function SummaryStats() {
     },
     {
       title: "Rejection Rate",
-      value: "23%",
-      change: "-3% from last period",
+      value: loading ? "Loading..." : `${rejectionRate}%`,
+      change: `${rejectedBills} bills rejected`,
       icon: AlertTriangle,
       color: "text-red-500",
     },
     {
       title: "Approval Rate",
-      value: "68%",
-      change: "+5% from last period",
+      value: loading ? "Loading..." : `${approvalRate}%`,
+      change: `${approvedBills} bills approved`,
       icon: CheckCircle,
       color: "text-green-500",
     },

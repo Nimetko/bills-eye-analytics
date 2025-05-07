@@ -1,11 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReasoningPanel } from "@/components/dashboard/ReasoningPanel";
-import { KnowledgeGraph } from "@/components/dashboard/KnowledgeGraph";
 import { SummaryStats } from "@/components/dashboard/SummaryStats";
 import { RejectionsByPolicyArea } from "@/components/dashboard/RejectionsByPolicyArea";
 import { ApprovalTimeAnalysis } from "@/components/dashboard/ApprovalTimeAnalysis";
+import { ReasoningPanel } from "@/components/dashboard/ReasoningPanel";
+import { KnowledgeGraph } from "@/components/dashboard/KnowledgeGraph";
+import { BillStatusTable } from "@/components/dashboard/BillStatusTable";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,6 +42,8 @@ export default function Dashboard() {
       </div>
       
       <SummaryStats />
+      
+      <BillStatusTable />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="col-span-1">
