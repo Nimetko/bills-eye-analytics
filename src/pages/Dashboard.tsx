@@ -4,7 +4,6 @@ import { SummaryStats } from "@/components/dashboard/SummaryStats";
 import { RejectionsByPolicyArea } from "@/components/dashboard/RejectionsByPolicyArea";
 import { ReasoningPanel } from "@/components/dashboard/ReasoningPanel";
 import { KnowledgeGraph } from "@/components/dashboard/KnowledgeGraph";
-import { BillStatusTable } from "@/components/dashboard/BillStatusTable";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,8 +41,6 @@ export default function Dashboard() {
       
       <SummaryStats />
       
-      <BillStatusTable />
-
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Rejections by Policy Area</CardTitle>
