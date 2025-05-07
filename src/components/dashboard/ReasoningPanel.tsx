@@ -120,7 +120,7 @@ export function ReasoningPanel() {
               <p className="font-medium mb-2">Sample Queries:</p>
               <ul className="space-y-2 text-gray-600">
                 <li>• Why are health bills failing so often?</li>
-                <li>• How many bills have been rejected in Economy policy area?</li>
+                <li>• How many bills in the Economy policy area have been rejected?</li>
                 <li>• What common language patterns appear in bills that get rejected?</li>
               </ul>
             </div>
