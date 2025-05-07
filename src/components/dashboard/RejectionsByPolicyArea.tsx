@@ -108,8 +108,8 @@ export function RejectionsByPolicyArea() {
               tick={{ 
                 fontSize: xAxisProps.fontSize,
                 width: 80,
-                textOverflow: 'ellipsis',
-                wordWrap: 'break-word' 
+                // Remove the invalid textOverflow property
+                // Use a combination of valid SVG properties instead
               }}
               tickLine={false}
               axisLine={false}
