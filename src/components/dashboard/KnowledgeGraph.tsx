@@ -625,10 +625,7 @@ export function KnowledgeGraph() {
             <input type="file" id="rdf-upload" className="hidden" onChange={handleFileUpload} accept=".ttl,.rdf,.n3" />
             <label htmlFor="rdf-upload">
               <Button variant="outline" size="sm" className="flex items-center gap-1" asChild>
-                <span>
-                  <Upload size={14} />
-                  Load RDF
-                </span>
+                
               </Button>
             </label>
           </div>
