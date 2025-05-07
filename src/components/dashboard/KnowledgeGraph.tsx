@@ -1,7 +1,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { demoGraphData, KnowledgeGraphData, Node, Edge } from '@/services/KnowledgeGraphData';
+import { demoGraphData, KnowledgeGraphData, Node, Edge, fetchGraphData } from '@/services/KnowledgeGraphData';
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, RefreshCw } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
@@ -25,13 +25,21 @@ export function KnowledgeGraph() {
   const [activeTab, setActiveTab] = useState<string>("entities");
   const [graphData, setGraphData] = useState<KnowledgeGraphData>(demoGraphData);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); // Default to mock data
+  const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); 
+  const [isUsingServer, setIsUsingServer] = useState<boolean>(false);
   
   // Fetch bills from Supabase
-  const { data: bills, isLoading, error, refetch } = useQuery({
+  const { data: bills, isLoading: isLoadingSupabase, error: supabaseError, refetch } = useQuery({
     queryKey: ['bills'],
     queryFn: fetchBills,
     enabled: isUsingSupabase,
+  });
+  
+  // Fetch graph data directly from server
+  const { data: serverGraphData, isLoading: isLoadingServer, error: serverError, refetch: refetchServer } = useQuery({
+    queryKey: ['knowledgeGraph'],
+    queryFn: fetchGraphData,
+    enabled: isUsingServer,
   });
   
   // Convert bills data to graph format
@@ -42,9 +50,17 @@ export function KnowledgeGraph() {
     }
   }, [bills, isUsingSupabase]);
   
+  // Set server graph data when available
+  useEffect(() => {
+    if (serverGraphData && isUsingServer) {
+      setGraphData(serverGraphData);
+    }
+  }, [serverGraphData, isUsingServer]);
+  
   // Load RDF data from file
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsUsingSupabase(false);
+    setIsUsingServer(false);
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -62,7 +78,15 @@ export function KnowledgeGraph() {
   // Switch to Supabase data
   const handleUseSupabase = () => {
     setIsUsingSupabase(true);
+    setIsUsingServer(false);
     refetch();
+  };
+  
+  // Switch to Server data
+  const handleUseServerData = () => {
+    setIsUsingServer(true);
+    setIsUsingSupabase(false);
+    refetchServer();
   };
   
   // Generate colors based on node type
@@ -340,6 +364,9 @@ export function KnowledgeGraph() {
     };
   }, [graphData, hoveredNode]);
 
+  const isLoading = isLoadingSupabase || isLoadingServer;
+  const error = supabaseError || serverError;
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex space-x-2 mb-4">
@@ -363,11 +390,22 @@ export function KnowledgeGraph() {
             variant="outline" 
             size="sm" 
             className="flex items-center gap-1"
+            onClick={handleUseServerData}
+            disabled={isLoading}
+          >
+            <RefreshCw size={14} className={isLoadingServer ? "animate-spin" : ""} />
+            {isUsingServer ? "Refresh Server Data" : "Use Server Data"}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
             onClick={handleUseSupabase}
             disabled={isLoading}
           >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            {isUsingSupabase ? "Refresh" : "Use Supabase Data"}
+            <RefreshCw size={14} className={isLoadingSupabase ? "animate-spin" : ""} />
+            {isUsingSupabase ? "Refresh Supabase" : "Use Supabase Data"}
           </Button>
           
           <div className="relative">
@@ -405,6 +443,8 @@ export function KnowledgeGraph() {
           <p className="text-sm text-gray-500 mb-4">
             {isUsingSupabase 
               ? "Interactive visualization of parliamentary bills from Supabase database"
+              : isUsingServer
+              ? "Interactive visualization of knowledge graph from server API"
               : "Interactive visualization of bills and their relationships"}
           </p>
           

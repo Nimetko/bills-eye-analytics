@@ -118,6 +118,24 @@ export function parseRDFToGraphData(rdfData: string): KnowledgeGraphData {
   return { nodes, edges };
 }
 
+// Function to fetch graph data from server
+export async function fetchGraphData(): Promise<KnowledgeGraphData> {
+  try {
+    const response = await fetch('/api/knowledge-graph');
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const data: KnowledgeGraphData = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching knowledge graph data:', error);
+    // Return demo data as fallback
+    return demoGraphData;
+  }
+}
+
 // Structured mock data for the knowledge graph visualization
 export const mockGraphData: KnowledgeGraphData = {
   nodes: [
