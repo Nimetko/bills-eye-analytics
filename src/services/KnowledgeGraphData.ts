@@ -1,4 +1,3 @@
-
 export interface Node {
   id: string;
   label: string;
@@ -119,26 +118,70 @@ export function parseRDFToGraphData(rdfData: string): KnowledgeGraphData {
   return { nodes, edges };
 }
 
-// Sample RDF data for testing
-export const sampleRDFData = `@prefix ns1: <http://example.org/legislation/> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
-ns1:Bill1919 ns1:belongsTo ns1:Education ;
-    ns1:currentHouse ns1:Commons ;
-    ns1:hasStatus ns1:2nd_reading ;
-    ns1:originatingHouse ns1:Commons .
-
-ns1:Bill2862 ns1:belongsTo ns1:Education ;
-    ns1:currentHouse ns1:Unassigned ;
-    ns1:hasStatus ns1:Royal_Assent ;
-    ns1:isAct true ;
-    ns1:originatingHouse ns1:Commons .
-
-ns1:Bill2868 ns1:belongsTo ns1:Education ;
-    ns1:currentHouse ns1:Unassigned ;
-    ns1:hasStatus ns1:Royal_Assent ;
-    ns1:isAct true ;
-    ns1:originatingHouse ns1:Lords .`;
+// Structured mock data for the knowledge graph visualization
+export const mockGraphData: KnowledgeGraphData = {
+  nodes: [
+    // Bills
+    { id: "bill-1", label: "Education Reform Act", type: "bill" },
+    { id: "bill-2", label: "Healthcare Amendment", type: "bill" },
+    { id: "bill-3", label: "Environmental Protection", type: "bill" },
+    { id: "bill-4", label: "Digital Rights Act", type: "bill" },
+    { id: "bill-5", label: "Transportation Funding", type: "bill" },
+    
+    // Houses
+    { id: "commons", label: "Commons", type: "house" },
+    { id: "lords", label: "Lords", type: "house" },
+    
+    // Policy Areas
+    { id: "education", label: "Education", type: "policyArea" },
+    { id: "health", label: "Health", type: "policyArea" },
+    { id: "environment", label: "Environment", type: "policyArea" },
+    { id: "technology", label: "Technology", type: "policyArea" },
+    { id: "transport", label: "Transport", type: "policyArea" },
+    
+    // Statuses
+    { id: "1st_reading", label: "1st Reading", type: "status" },
+    { id: "2nd_reading", label: "2nd Reading", type: "status" },
+    { id: "committee", label: "Committee Stage", type: "status" },
+    { id: "royal_assent", label: "Royal Assent", type: "status" },
+    
+    // Properties
+    { id: "isAct_true", label: "Act", type: "property" },
+  ],
+  edges: [
+    // Bill 1 connections
+    { source: "bill-1", target: "education", label: "belongsTo" },
+    { source: "bill-1", target: "commons", label: "currentHouse" },
+    { source: "bill-1", target: "commons", label: "originatingHouse" },
+    { source: "bill-1", target: "2nd_reading", label: "hasStatus" },
+    
+    // Bill 2 connections
+    { source: "bill-2", target: "health", label: "belongsTo" },
+    { source: "bill-2", target: "lords", label: "currentHouse" },
+    { source: "bill-2", target: "lords", label: "originatingHouse" },
+    { source: "bill-2", target: "committee", label: "hasStatus" },
+    
+    // Bill 3 connections
+    { source: "bill-3", target: "environment", label: "belongsTo" },
+    { source: "bill-3", target: "commons", label: "currentHouse" },
+    { source: "bill-3", target: "lords", label: "originatingHouse" },
+    { source: "bill-3", target: "royal_assent", label: "hasStatus" },
+    { source: "bill-3", target: "isAct_true", label: "isAct" },
+    
+    // Bill 4 connections
+    { source: "bill-4", target: "technology", label: "belongsTo" },
+    { source: "bill-4", target: "commons", label: "currentHouse" },
+    { source: "bill-4", target: "commons", label: "originatingHouse" },
+    { source: "bill-4", target: "1st_reading", label: "hasStatus" },
+    
+    // Bill 5 connections
+    { source: "bill-5", target: "transport", label: "belongsTo" },
+    { source: "bill-5", target: "lords", label: "currentHouse" },
+    { source: "bill-5", target: "lords", label: "originatingHouse" },
+    { source: "bill-5", target: "royal_assent", label: "hasStatus" },
+    { source: "bill-5", target: "isAct_true", label: "isAct" },
+  ]
+};
 
 // Export pre-processed data for demo
-export const demoGraphData = parseRDFToGraphData(sampleRDFData);
+export const demoGraphData = mockGraphData;

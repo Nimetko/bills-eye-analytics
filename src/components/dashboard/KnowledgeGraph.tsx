@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { demoGraphData, KnowledgeGraphData, Node, Edge } from '@/services/KnowledgeGraphData';
@@ -24,7 +25,7 @@ export function KnowledgeGraph() {
   const [activeTab, setActiveTab] = useState<string>("entities");
   const [graphData, setGraphData] = useState<KnowledgeGraphData>(demoGraphData);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(true);
+  const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); // Default to mock data
   
   // Fetch bills from Supabase
   const { data: bills, isLoading, error, refetch } = useQuery({
@@ -95,19 +96,21 @@ export function KnowledgeGraph() {
     // Create a simple force-directed graph (in a real app, use D3.js or a similar library)
     const nodes: NodeWithPosition[] = graphData.nodes.map(node => ({
       ...node,
-      x: Math.random() * width,
-      y: Math.random() * height,
+      x: Math.random() * width * 0.6 + width * 0.2, // Distribute more centrally
+      y: Math.random() * height * 0.6 + height * 0.2,
       vx: 0,
       vy: 0
     }));
     
     const nodeMap = new Map(nodes.map(node => [node.id, node]));
     
-    const edges: EdgeWithNodes[] = graphData.edges.map(edge => ({
-      ...edge,
-      sourceNode: nodeMap.get(edge.source) as NodeWithPosition,
-      targetNode: nodeMap.get(edge.target) as NodeWithPosition
-    }));
+    const edges: EdgeWithNodes[] = graphData.edges
+      .filter(edge => nodeMap.has(edge.source) && nodeMap.has(edge.target))
+      .map(edge => ({
+        ...edge,
+        sourceNode: nodeMap.get(edge.source) as NodeWithPosition,
+        targetNode: nodeMap.get(edge.target) as NodeWithPosition
+      }));
     
     // Create a group for edges
     const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -118,15 +121,25 @@ export function KnowledgeGraph() {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('stroke', '#ccc');
       line.setAttribute('stroke-width', '1');
+      line.setAttribute('opacity', '0.7');
       edgesGroup.appendChild(line);
       
-      // Add edge label
+      // Add edge label - only show on hover to reduce clutter
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('font-size', '8px');
+      text.setAttribute('font-size', '7px');
       text.setAttribute('fill', '#666');
+      text.setAttribute('opacity', '0');
       text.textContent = edge.label;
       text.style.pointerEvents = 'none';
       edgesGroup.appendChild(text);
+      
+      // Show label on hover
+      line.addEventListener('mouseover', () => {
+        text.setAttribute('opacity', '1');
+      });
+      line.addEventListener('mouseout', () => {
+        text.setAttribute('opacity', '0');
+      });
     });
     
     // Create a group for nodes
@@ -141,30 +154,72 @@ export function KnowledgeGraph() {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('r', getNodeRadius(node).toString());
       circle.setAttribute('fill', getNodeColor(node));
+      
+      // Add subtle shadow effect
+      const glow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+      glow.setAttribute('dx', '0');
+      glow.setAttribute('dy', '0');
+      glow.setAttribute('stdDeviation', '2');
+      glow.setAttribute('flood-color', getNodeColor(node));
+      glow.setAttribute('flood-opacity', '0.3');
+      
+      const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', `glow-${node.id}`);
+      filter.appendChild(glow);
+      
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.appendChild(filter);
+      group.appendChild(defs);
+      
+      circle.setAttribute('filter', `url(#glow-${node.id})`);
       group.appendChild(circle);
       
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('font-size', '10px');
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('dy', '3px');
-      text.setAttribute('fill', 'white');
-      // FIX: Add null check for node.label to prevent undefined error
-      text.textContent = node.label && node.label.length > 0 ? node.label.substring(0, 2) : '';
-      text.style.pointerEvents = 'none';
-      group.appendChild(text);
+      // Add label to circle - first letters only for cleaner look
+      if (node.type === 'bill') {
+        const innerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        innerText.setAttribute('font-size', '10px');
+        innerText.setAttribute('text-anchor', 'middle');
+        innerText.setAttribute('dy', '3px');
+        innerText.setAttribute('fill', 'white');
+        innerText.setAttribute('font-weight', 'bold');
+        innerText.textContent = node.label && node.label.length > 0 
+          ? node.label.split(' ').map(word => word[0]).join('').substring(0, 2) 
+          : '';
+        innerText.style.pointerEvents = 'none';
+        group.appendChild(innerText);
+      }
       
+      // Add full label below node
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('font-size', '10px');
+      label.setAttribute('font-size', node.type === 'bill' ? '10px' : '8px');
       label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('dy', '20px');
+      label.setAttribute('dy', node.type === 'bill' ? '24px' : '16px');
       label.setAttribute('fill', '#333');
-      // FIX: Add null check for node.label to prevent undefined error
-      label.textContent = node.label || '';
+      
+      // Truncate long labels
+      const maxLength = node.type === 'bill' ? 20 : 12;
+      label.textContent = node.label && node.label.length > maxLength
+        ? node.label.substring(0, maxLength) + '...'
+        : node.label || '';
+      
       label.style.pointerEvents = 'none';
+      label.setAttribute('opacity', '0.8');
       group.appendChild(label);
       
-      group.addEventListener('mouseover', () => setHoveredNode(node.id));
-      group.addEventListener('mouseout', () => setHoveredNode(null));
+      // Hover effects
+      group.addEventListener('mouseover', () => {
+        setHoveredNode(node.id);
+        circle.setAttribute('r', (getNodeRadius(node) * 1.2).toString());
+        label.setAttribute('font-weight', 'bold');
+        label.setAttribute('opacity', '1');
+      });
+      
+      group.addEventListener('mouseout', () => {
+        setHoveredNode(null);
+        circle.setAttribute('r', getNodeRadius(node).toString());
+        label.setAttribute('font-weight', 'normal');
+        label.setAttribute('opacity', '0.8');
+      });
       
       nodesGroup.appendChild(group);
       
@@ -244,19 +299,35 @@ export function KnowledgeGraph() {
       const edgeElements = edgesGroup.childNodes;
       for (let i = 0; i < edges.length; i++) {
         const edge = edges[i];
-        const line = edgeElements[i * 2] as SVGLineElement;
-        const text = edgeElements[i * 2 + 1] as SVGTextElement;
+        const lineIndex = i * 2;
+        const textIndex = i * 2 + 1;
         
-        line.setAttribute('x1', edge.sourceNode.x.toString());
-        line.setAttribute('y1', edge.sourceNode.y.toString());
-        line.setAttribute('x2', edge.targetNode.x.toString());
-        line.setAttribute('y2', edge.targetNode.y.toString());
-        
-        // Position the label at the midpoint of the edge
-        const midX = (edge.sourceNode.x + edge.targetNode.x) / 2;
-        const midY = (edge.sourceNode.y + edge.targetNode.y) / 2;
-        text.setAttribute('x', midX.toString());
-        text.setAttribute('y', midY.toString());
+        if (lineIndex < edgeElements.length && textIndex < edgeElements.length) {
+          const line = edgeElements[lineIndex] as SVGLineElement;
+          const text = edgeElements[textIndex] as SVGTextElement;
+          
+          line.setAttribute('x1', edge.sourceNode.x.toString());
+          line.setAttribute('y1', edge.sourceNode.y.toString());
+          line.setAttribute('x2', edge.targetNode.x.toString());
+          line.setAttribute('y2', edge.targetNode.y.toString());
+          
+          // Position the label at the midpoint of the edge
+          const midX = (edge.sourceNode.x + edge.targetNode.x) / 2;
+          const midY = (edge.sourceNode.y + edge.targetNode.y) / 2;
+          text.setAttribute('x', midX.toString());
+          text.setAttribute('y', midY.toString());
+          
+          // Highlight connected edges when a node is hovered
+          if (hoveredNode && (edge.sourceNode.id === hoveredNode || edge.targetNode.id === hoveredNode)) {
+            line.setAttribute('stroke', '#666');
+            line.setAttribute('stroke-width', '2');
+            text.setAttribute('opacity', '1');
+          } else {
+            line.setAttribute('stroke', '#ccc');
+            line.setAttribute('stroke-width', '1');
+            text.setAttribute('opacity', '0');
+          }
+        }
       }
       
       animationId = requestAnimationFrame(simulation);
@@ -334,7 +405,7 @@ export function KnowledgeGraph() {
           <p className="text-sm text-gray-500 mb-4">
             {isUsingSupabase 
               ? "Interactive visualization of parliamentary bills from Supabase database"
-              : "Interactive visualization of bill relationships from RDF data"}
+              : "Interactive visualization of bills and their relationships"}
           </p>
           
           <div className="bg-gray-50 rounded-md flex-1 overflow-hidden">
@@ -347,17 +418,15 @@ export function KnowledgeGraph() {
           </div>
           
           <div className="flex mt-3 flex-wrap gap-2 justify-center">
-            <Badge className="bg-parliament-purple">Bills</Badge>
+            <Badge className="bg-[#9b87f5]">Bills</Badge>
             <Badge className="bg-[#ff9580]">Houses</Badge>
             <Badge className="bg-[#82c0cc]">Status</Badge>
             <Badge className="bg-[#38b000]">Policy Areas</Badge>
             <Badge className="bg-[#adb5bd]">Properties</Badge>
           </div>
           
-          <p className="text-sm text-gray-400 mt-2 text-center">
-            Drag nodes to explore relationships. {isUsingSupabase 
-              ? "Data loaded from Supabase."
-              : "Upload RDF data to visualize custom graphs."}
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Hover over nodes and connections to explore relationships
           </p>
         </>
       )}
