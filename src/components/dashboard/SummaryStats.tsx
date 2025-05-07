@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { FileText, AlertTriangle, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export function SummaryStats() {
@@ -71,13 +71,6 @@ export function SummaryStats() {
       color: "text-blue-500",
     },
     {
-      title: "Average Processing Time",
-      value: "142 days",
-      change: "-8% from last period",
-      icon: Clock,
-      color: "text-amber-500",
-    },
-    {
       title: "Rejection Rate",
       value: loading ? "Loading..." : `${rejectionRate}%`,
       change: `${rejectedBills} bills rejected`,
@@ -94,7 +87,7 @@ export function SummaryStats() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {stats.map((stat, index) => (
         <Card key={index}>
           <CardContent className="pt-6">
