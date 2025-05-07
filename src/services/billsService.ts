@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export interface Bill {
   id: string;
   title: string;
-  policy_area: string;
+  policyArea: string;
   current_house: string;
   status: string;
   originating_house: string;
@@ -26,7 +26,7 @@ export interface RejectionData {
 // Fetch all bills
 export async function fetchBills() {
   const { data, error } = await supabase
-    .from('bills')
+    .from('all_bills_uk')
     .select('*');
   
   if (error) {
@@ -40,8 +40,8 @@ export async function fetchBills() {
 // Get approval time analysis by policy area
 export async function fetchApprovalTimeByPolicyArea(): Promise<ApprovalTimeData[]> {
   const { data, error } = await supabase
-    .from('bills')
-    .select('policy_area, days_to_approval')
+    .from('all_bills_uk')
+    .select('policyArea, days_to_approval')
     .not('days_to_approval', 'is', null);
   
   if (error) {
@@ -51,7 +51,7 @@ export async function fetchApprovalTimeByPolicyArea(): Promise<ApprovalTimeData[
   
   // Group and average the days by policy area
   const policyAreas = data.reduce((acc: Record<string, { total: number, count: number }>, bill) => {
-    const area = bill.policy_area;
+    const area = bill.policyArea;
     if (!acc[area]) {
       acc[area] = { total: 0, count: 0 };
     }
@@ -70,8 +70,8 @@ export async function fetchApprovalTimeByPolicyArea(): Promise<ApprovalTimeData[
 // Get rejections count by policy area
 export async function fetchRejectionsByPolicyArea(): Promise<RejectionData[]> {
   const { data, error } = await supabase
-    .from('bills')
-    .select('policy_area')
+    .from('all_bills_uk')
+    .select('policyArea')
     .eq('status', 'Rejected');
   
   if (error) {
@@ -81,7 +81,7 @@ export async function fetchRejectionsByPolicyArea(): Promise<RejectionData[]> {
   
   // Count rejections by policy area
   const rejections = data.reduce((acc: Record<string, number>, bill) => {
-    const area = bill.policy_area;
+    const area = bill.policyArea;
     acc[area] = (acc[area] || 0) + 1;
     return acc;
   }, {});
@@ -110,10 +110,10 @@ export function convertBillsToGraphData(bills: Bill[]) {
     }
     
     // Add policy area node if it doesn't exist
-    if (!nodes.has(bill.policy_area)) {
-      nodes.set(bill.policy_area, {
-        id: bill.policy_area,
-        label: bill.policy_area,
+    if (!nodes.has(bill.policyArea)) {
+      nodes.set(bill.policyArea, {
+        id: bill.policyArea,
+        label: bill.policyArea,
         type: 'policyArea',
       });
     }
@@ -148,7 +148,7 @@ export function convertBillsToGraphData(bills: Bill[]) {
     // Add edges
     edges.push({
       source: bill.id,
-      target: bill.policy_area,
+      target: bill.policyArea,
       label: 'belongsTo',
     });
     
