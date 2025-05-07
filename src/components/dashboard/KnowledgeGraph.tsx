@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { demoGraphData, KnowledgeGraphData, Node, Edge } from '@/services/KnowledgeGraphData';
@@ -149,7 +148,8 @@ export function KnowledgeGraph() {
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('dy', '3px');
       text.setAttribute('fill', 'white');
-      text.textContent = node.label.substring(0, 2);
+      // FIX: Add null check for node.label to prevent undefined error
+      text.textContent = node.label && node.label.length > 0 ? node.label.substring(0, 2) : '';
       text.style.pointerEvents = 'none';
       group.appendChild(text);
       
@@ -158,7 +158,8 @@ export function KnowledgeGraph() {
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('dy', '20px');
       label.setAttribute('fill', '#333');
-      label.textContent = node.label;
+      // FIX: Add null check for node.label to prevent undefined error
+      label.textContent = node.label || '';
       label.style.pointerEvents = 'none';
       group.appendChild(label);
       
