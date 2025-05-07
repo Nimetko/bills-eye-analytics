@@ -1,8 +1,7 @@
 
 import { useEffect, useState } from 'react';
-import { Card } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import { fetchRejectionsByPolicyArea } from '@/services/billsService';
 import { RejectionData } from '@/services/billsService';
 
@@ -63,7 +62,7 @@ export function RejectionsByPolicyArea() {
   }
   
   return (
-    <div className="h-72">
+    <div className="h-80">
       <ChartContainer
         config={{
           rejected: {
@@ -75,7 +74,7 @@ export function RejectionsByPolicyArea() {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 10, right: 10, left: 20, bottom: 40 }}
+            margin={{ top: 10, right: 10, left: 20, bottom: 60 }}
             barSize={24}
           >
             <XAxis 
@@ -85,7 +84,8 @@ export function RejectionsByPolicyArea() {
               axisLine={false}
               angle={-45}
               textAnchor="end"
-              height={80}
+              height={100}
+              dy={10}
             />
             <YAxis 
               tickLine={false}
