@@ -53,23 +53,25 @@ export default function Dashboard() {
         </CardContent>
       </Card>
       
-      <Card className="col-span-1">
-        <CardHeader>
-          <CardTitle>Knowledge Graph</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[900px]">
-          <KnowledgeGraph />
-        </CardContent>
-      </Card>
-      
-      <Card className="col-span-1">
-        <CardHeader>
-          <CardTitle>Reasoning Panel</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[500px] overflow-auto flex flex-col">
-          <ReasoningPanel />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Knowledge Graph</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[800px]">
+            <KnowledgeGraph />
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Reasoning Panel</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[500px] overflow-auto flex flex-col">
+            <ReasoningPanel />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
