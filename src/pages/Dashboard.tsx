@@ -8,8 +8,17 @@ import { RejectionsByPolicyArea } from "@/components/dashboard/RejectionsByPolic
 import { ApprovalTimeAnalysis } from "@/components/dashboard/ApprovalTimeAnalysis";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  
+  const handleRefreshData = () => {
+    queryClient.invalidateQueries({ queryKey: ['bills'] });
+    queryClient.invalidateQueries({ queryKey: ['approvalTimes'] });
+    queryClient.invalidateQueries({ queryKey: ['rejections'] });
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -21,7 +30,7 @@ export default function Dashboard() {
         </div>
         
         <div className="flex space-x-3">
-          <Button variant="outline" size="sm" className="flex items-center">
+          <Button variant="outline" size="sm" className="flex items-center" onClick={handleRefreshData}>
             <RefreshCw size={16} className="mr-2" />
             Refresh Data
           </Button>

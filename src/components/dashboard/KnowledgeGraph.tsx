@@ -1,8 +1,11 @@
+
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { demoGraphData, KnowledgeGraphData, Node, Edge } from '@/services/KnowledgeGraphData';
 import { Button } from "@/components/ui/button";
-import { FileText, Upload } from "lucide-react";
+import { FileText, Upload, RefreshCw } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
+import { fetchBills, convertBillsToGraphData } from '@/services/billsService';
 
 // Force-directed graph simulation parameters
 type NodeWithPosition = Node & {
@@ -22,9 +25,26 @@ export function KnowledgeGraph() {
   const [activeTab, setActiveTab] = useState<string>("entities");
   const [graphData, setGraphData] = useState<KnowledgeGraphData>(demoGraphData);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(true);
+  
+  // Fetch bills from Supabase
+  const { data: bills, isLoading, error, refetch } = useQuery({
+    queryKey: ['bills'],
+    queryFn: fetchBills,
+    enabled: isUsingSupabase,
+  });
+  
+  // Convert bills data to graph format
+  useEffect(() => {
+    if (bills && isUsingSupabase) {
+      const graphData = convertBillsToGraphData(bills);
+      setGraphData(graphData);
+    }
+  }, [bills, isUsingSupabase]);
   
   // Load RDF data from file
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsUsingSupabase(false);
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -37,6 +57,12 @@ export function KnowledgeGraph() {
       };
       reader.readAsText(file);
     }
+  };
+  
+  // Switch to Supabase data
+  const handleUseSupabase = () => {
+    setIsUsingSupabase(true);
+    refetch();
   };
   
   // Generate colors based on node type
@@ -54,6 +80,7 @@ export function KnowledgeGraph() {
     return node.type === 'bill' ? 12 : 8;
   };
   
+  // Force-directed graph rendering
   useEffect(() => {
     if (!svgRef.current) return;
     
@@ -259,49 +286,80 @@ export function KnowledgeGraph() {
         
         <div className="flex-grow"></div>
         
-        <div className="relative">
-          <input
-            type="file"
-            id="rdf-upload"
-            className="hidden"
-            onChange={handleFileUpload}
-            accept=".ttl,.rdf,.n3"
-          />
-          <label htmlFor="rdf-upload">
-            <Button variant="outline" size="sm" className="flex items-center gap-1" asChild>
-              <span>
-                <Upload size={14} />
-                Load RDF
-              </span>
-            </Button>
-          </label>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={handleUseSupabase}
+            disabled={isLoading}
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            {isUsingSupabase ? "Refresh" : "Use Supabase Data"}
+          </Button>
+          
+          <div className="relative">
+            <input
+              type="file"
+              id="rdf-upload"
+              className="hidden"
+              onChange={handleFileUpload}
+              accept=".ttl,.rdf,.n3"
+            />
+            <label htmlFor="rdf-upload">
+              <Button variant="outline" size="sm" className="flex items-center gap-1" asChild>
+                <span>
+                  <Upload size={14} />
+                  Load RDF
+                </span>
+              </Button>
+            </label>
+          </div>
         </div>
       </div>
       
-      <p className="text-sm text-gray-500 mb-4">
-        Interactive visualization of bill relationships and policy connections
-      </p>
+      {error && (
+        <div className="text-red-500 mb-4">
+          Error loading data: {(error as Error).message}
+        </div>
+      )}
       
-      <div className="bg-gray-50 rounded-md flex-1 overflow-hidden">
-        <svg 
-          ref={svgRef} 
-          width="100%" 
-          height="100%" 
-          className="w-full h-full"
-        ></svg>
-      </div>
-      
-      <div className="flex mt-3 flex-wrap gap-2 justify-center">
-        <Badge className="bg-parliament-purple">Bills</Badge>
-        <Badge className="bg-[#ff9580]">Houses</Badge>
-        <Badge className="bg-[#82c0cc]">Status</Badge>
-        <Badge className="bg-[#38b000]">Policy Areas</Badge>
-        <Badge className="bg-[#adb5bd]">Properties</Badge>
-      </div>
-      
-      <p className="text-sm text-gray-400 mt-2 text-center">
-        Drag nodes to explore relationships. Upload RDF data to visualize custom graphs.
-      </p>
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-parliament-purple"></div>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-gray-500 mb-4">
+            {isUsingSupabase 
+              ? "Interactive visualization of parliamentary bills from Supabase database"
+              : "Interactive visualization of bill relationships from RDF data"}
+          </p>
+          
+          <div className="bg-gray-50 rounded-md flex-1 overflow-hidden">
+            <svg 
+              ref={svgRef} 
+              width="100%" 
+              height="100%" 
+              className="w-full h-full"
+            ></svg>
+          </div>
+          
+          <div className="flex mt-3 flex-wrap gap-2 justify-center">
+            <Badge className="bg-parliament-purple">Bills</Badge>
+            <Badge className="bg-[#ff9580]">Houses</Badge>
+            <Badge className="bg-[#82c0cc]">Status</Badge>
+            <Badge className="bg-[#38b000]">Policy Areas</Badge>
+            <Badge className="bg-[#adb5bd]">Properties</Badge>
+          </div>
+          
+          <p className="text-sm text-gray-400 mt-2 text-center">
+            Drag nodes to explore relationships. {isUsingSupabase 
+              ? "Data loaded from Supabase."
+              : "Upload RDF data to visualize custom graphs."}
+          </p>
+        </>
+      )}
     </div>
   );
 }
