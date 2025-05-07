@@ -18,7 +18,7 @@ export default function Dashboard() {
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-parliament-blue">Parliamentary Bills Analysis</h2>
@@ -45,8 +45,8 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle>Rejections by Policy Area</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="h-[450px]">
+        <CardContent className="px-4 pb-6">
+          <div className="h-[400px] w-full">
             <RejectionsByPolicyArea />
           </div>
         </CardContent>

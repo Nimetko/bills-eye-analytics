@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
@@ -50,7 +51,7 @@ export function RejectionsByPolicyArea() {
   
   if (loading) {
     return (
-      <div className="h-[400px] flex items-center justify-center">
+      <div className="flex items-center justify-center w-full h-full">
         <p className="text-gray-500">Loading rejection data...</p>
       </div>
     );
@@ -58,7 +59,7 @@ export function RejectionsByPolicyArea() {
   
   if (error) {
     return (
-      <div className="h-[400px] flex items-center justify-center">
+      <div className="flex items-center justify-center w-full h-full">
         <p className="text-red-500">{error}</p>
       </div>
     );
@@ -66,17 +67,17 @@ export function RejectionsByPolicyArea() {
   
   if (data.length === 0) {
     return (
-      <div className="h-[400px] flex items-center justify-center">
+      <div className="flex items-center justify-center w-full h-full">
         <p className="text-gray-500">No rejection data available</p>
       </div>
     );
   }
 
-  // Responsive configuration based on screen size
+  // Responsive configuration based on screen size with improved settings for full screen
   const chartConfig = {
     small: {
-      margin: { top: 10, right: 10, left: 0, bottom: 80 },
-      barSize: 20,
+      margin: { top: 20, right: 10, left: 0, bottom: 80 },
+      barSize: 15,
       xAxis: {
         angle: -60,
         dy: 20,
@@ -90,18 +91,18 @@ export function RejectionsByPolicyArea() {
       xAxis: {
         angle: -45,
         dy: 15,
-        fontSize: 12,
-        height: 100
+        fontSize: 11,
+        height: 90
       }
     },
     large: {
-      margin: { top: 20, right: 30, left: 30, bottom: 60 },
+      margin: { top: 20, right: 30, left: 30, bottom: 65 },
       barSize: 40,
       xAxis: {
-        angle: -30,
+        angle: -25,
         dy: 10,
         fontSize: 12,
-        height: 80
+        height: 70
       }
     }
   };
@@ -110,7 +111,7 @@ export function RejectionsByPolicyArea() {
   const config = isMobile ? chartConfig.small : window.innerWidth < 1200 ? chartConfig.medium : chartConfig.large;
   
   return (
-    <div className="h-[400px]">
+    <div className="w-full h-full">
       <ChartContainer
         config={{
           rejected: {
@@ -124,6 +125,7 @@ export function RejectionsByPolicyArea() {
             data={data}
             margin={config.margin}
             barSize={config.barSize}
+            layout="horizontal"
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
             <XAxis 
@@ -140,12 +142,14 @@ export function RejectionsByPolicyArea() {
               height={config.xAxis.height}
               dy={config.xAxis.dy}
               interval={0}
+              scale="band"
             />
             <YAxis 
               tickLine={false}
               axisLine={{ stroke: '#e5e7eb' }}
               tick={{ fontSize: 12, fill: "#4b5563" }}
               width={45}
+              domain={[0, 'dataMax + 10']}
             />
             <ChartTooltip
               content={({ active, payload }) => {
