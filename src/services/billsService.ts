@@ -98,30 +98,36 @@ export async function fetchApprovalTimeByPolicyArea(): Promise<ApprovalTimeData[
   }
 }
 
-// Get rejections count by policy area
+// Get rejections count by policy area - UPDATED to use is_act instead of status
 export async function fetchRejectionsByPolicyArea(): Promise<RejectionData[]> {
-  const { data, error } = await supabase
-    .from('all_bills_uk')
-    .select('policyArea')
-    .eq('status', 'Rejected');
-  
-  if (error) {
+  try {
+    // Fetch all bills
+    const { data, error } = await supabase
+      .from('all_bills_uk')
+      .select('policyArea, is_act')
+      .eq('is_act', false); // Filter for rejected bills (is_act = false)
+    
+    if (error) {
+      console.error('Error fetching rejections:', error);
+      throw error;
+    }
+    
+    // Count rejections by policy area
+    const rejections = data.reduce((acc: Record<string, number>, bill) => {
+      const area = bill.policyArea;
+      acc[area] = (acc[area] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Convert to the format expected by the chart
+    return Object.entries(rejections).map(([name, value]) => ({
+      name,
+      value
+    }));
+  } catch (error) {
     console.error('Error fetching rejections:', error);
     throw error;
   }
-  
-  // Count rejections by policy area
-  const rejections = data.reduce((acc: Record<string, number>, bill) => {
-    const area = bill.policyArea;
-    acc[area] = (acc[area] || 0) + 1;
-    return acc;
-  }, {});
-  
-  // Convert to the format expected by the chart
-  return Object.entries(rejections).map(([name, value]) => ({
-    name,
-    value
-  }));
 }
 
 // Convert bills data to the knowledge graph format
