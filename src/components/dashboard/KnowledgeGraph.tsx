@@ -1,8 +1,6 @@
-
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { 
-  demoGraphData, 
   KnowledgeGraphData, 
   Node, 
   Edge, 
@@ -29,14 +27,43 @@ type EdgeWithNodes = Edge & {
   targetNode: NodeWithPosition;
 };
 
+// Custom Parliament Bills Data
+const customTripletData: TripletData[] = [
+  { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3919" },
+  { object: "true", predicate: "isRejected", subject: "Bill3463" },
+  { object: "true", predicate: "isRejected", subject: "Bill3574" },
+  { object: "Commons", predicate: "currentHouse", subject: "Bill3919" },
+  { object: "Commons", predicate: "originatingHouse", subject: "Bill3670" },
+  { object: "Commons", predicate: "originatingHouse", subject: "Bill3673" },
+  { object: "Commons", predicate: "currentHouse", subject: "Bill3574" },
+  { object: "Commons", predicate: "originatingHouse", subject: "Bill3574" },
+  { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3670" },
+  { object: "Education", predicate: "belongsTo", subject: "Bill3463" },
+  { object: "Education", predicate: "belongsTo", subject: "Bill3673" },
+  { object: "Education", predicate: "belongsTo", subject: "Bill3919" },
+  { object: "Commons", predicate: "currentHouse", subject: "Bill3670" },
+  { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3463" },
+  { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3673" },
+  { object: "true", predicate: "isRejected", subject: "Bill3919" },
+  { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3574" },
+  { object: "Education", predicate: "belongsTo", subject: "Bill3670" },
+  { object: "Education", predicate: "belongsTo", subject: "Bill3574" },
+  { object: "true", predicate: "isRejected", subject: "Bill3670" },
+  { object: "true", predicate: "isRejected", subject: "Bill3673" },
+  { object: "Commons", predicate: "currentHouse", subject: "Bill3463" },
+  { object: "Commons", predicate: "currentHouse", subject: "Bill3673" },
+  { object: "Commons", predicate: "originatingHouse", subject: "Bill3463" },
+  { object: "Commons", predicate: "originatingHouse", subject: "Bill3919" }
+];
+
 export function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeTab, setActiveTab] = useState<string>("entities");
-  const [graphData, setGraphData] = useState<KnowledgeGraphData>(demoGraphData);
+  const [graphData, setGraphData] = useState<KnowledgeGraphData>({ nodes: [], edges: [] });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); 
   const [isUsingServer, setIsUsingServer] = useState<boolean>(false);
-  const [isUsingTriplets, setIsUsingTriplets] = useState<boolean>(false);
+  const [isUsingCustomData, setIsUsingCustomData] = useState<boolean>(true);
   const { toast } = useToast();
   
   // Fetch bills from Supabase
@@ -53,6 +80,18 @@ export function KnowledgeGraph() {
     enabled: isUsingServer,
   });
   
+  // Initialize with custom data
+  useEffect(() => {
+    if (isUsingCustomData) {
+      const parsedData = parseTripletToGraphData(customTripletData);
+      setGraphData(parsedData);
+      toast({
+        title: "Parliament Bills Data Loaded",
+        description: `Loaded ${parsedData.nodes.length} nodes and ${parsedData.edges.length} edges from triplet data`,
+      });
+    }
+  }, [isUsingCustomData, toast]);
+
   // Convert bills data to graph format
   useEffect(() => {
     if (bills && isUsingSupabase) {
@@ -72,7 +111,7 @@ export function KnowledgeGraph() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsUsingSupabase(false);
     setIsUsingServer(false);
-    setIsUsingTriplets(false);
+    setIsUsingCustomData(false);
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -91,44 +130,25 @@ export function KnowledgeGraph() {
     }
   };
   
-  // Load JSON triplet data
-  const handleLoadTripletData = () => {
+  // Use custom triplet data
+  const handleUseCustomData = () => {
     setIsUsingSupabase(false);
     setIsUsingServer(false);
-    setIsUsingTriplets(true);
+    setIsUsingCustomData(true);
     
-    // For demo purposes, fetch from a static JSON file
-    // In a real implementation, this would be from an API endpoint
-    fetch('/api/triplet-data')
-      .then(response => response.json())
-      .catch(() => {
-        // Fallback to sample data if fetch fails
-        console.log("Using embedded triplet data");
-        return sampleTripletData;
-      })
-      .then((data: TripletData[]) => {
-        const parsedData = parseTripletToGraphData(data);
-        setGraphData(parsedData);
-        toast({
-          title: "Triplet data loaded",
-          description: `Loaded ${parsedData.nodes.length} nodes and ${parsedData.edges.length} edges from triplet data`,
-        });
-      })
-      .catch(err => {
-        console.error("Error processing triplet data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to process triplet data",
-          variant: "destructive",
-        });
-      });
+    const parsedData = parseTripletToGraphData(customTripletData);
+    setGraphData(parsedData);
+    toast({
+      title: "Parliament Bills Data Loaded",
+      description: `Loaded ${parsedData.nodes.length} nodes and ${parsedData.edges.length} edges from triplet data`,
+    });
   };
   
   // Switch to Supabase data
   const handleUseSupabase = () => {
     setIsUsingSupabase(true);
     setIsUsingServer(false);
-    setIsUsingTriplets(false);
+    setIsUsingCustomData(false);
     refetch();
   };
   
@@ -136,7 +156,7 @@ export function KnowledgeGraph() {
   const handleUseServerData = () => {
     setIsUsingServer(true);
     setIsUsingSupabase(false);
-    setIsUsingTriplets(false);
+    setIsUsingCustomData(false);
     refetchServer();
   };
   
@@ -157,7 +177,7 @@ export function KnowledgeGraph() {
   
   // Force-directed graph rendering
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || graphData.nodes.length === 0) return;
     
     const svgElement = svgRef.current;
     const width = svgElement.clientWidth;
@@ -415,33 +435,8 @@ export function KnowledgeGraph() {
     };
   }, [graphData, hoveredNode]);
 
-  const isLoading = isLoadingSupabase || isLoadingServer;
+  const isLoading = isLoadingSupabase || isLoadingServer || (graphData.nodes.length === 0 && isUsingCustomData);
   const error = supabaseError || serverError;
-
-  // Sample triplet data embedded for demonstration
-  const sampleTripletData: TripletData[] = [
-    {
-      "subject": "Bill3082",
-      "predicate": "belongsTo",
-      "object": "Education"
-    },
-    {
-      "subject": "Bill3134",
-      "predicate": "hasStatus",
-      "object": "2nd_reading"
-    },
-    // ... more sample data would go here in a real implementation
-    {
-      "subject": "Bill3134",
-      "predicate": "isRejected",
-      "object": "true"
-    },
-    {
-      "subject": "Bill3208",
-      "predicate": "currentHouse",
-      "object": "Commons"
-    }
-  ];
 
   return (
     <div className="h-full flex flex-col">
@@ -466,11 +461,11 @@ export function KnowledgeGraph() {
             variant="outline" 
             size="sm" 
             className="flex items-center gap-1"
-            onClick={handleLoadTripletData}
+            onClick={handleUseCustomData}
             disabled={isLoading}
           >
             <Database size={14} />
-            {isUsingTriplets ? "Refresh Triplet Data" : "Use Triplet Data"}
+            {isUsingCustomData ? "Refresh Bills Data" : "Use Bills Data"}
           </Button>
 
           <Button 
@@ -532,8 +527,8 @@ export function KnowledgeGraph() {
               ? "Interactive visualization of parliamentary bills from Supabase database"
               : isUsingServer
               ? "Interactive visualization of knowledge graph from server API"
-              : isUsingTriplets
-              ? "Interactive visualization of triplet data showing bills and their relationships"
+              : isUsingCustomData
+              ? "Interactive visualization of custom Parliament Bills data"
               : "Interactive visualization of bills and their relationships"}
           </p>
           
