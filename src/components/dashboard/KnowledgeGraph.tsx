@@ -616,10 +616,7 @@ export function KnowledgeGraph() {
             {isUsingServer ? "Refresh Server Data" : "Use Server Data"}
           </Button>
           
-          <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleUseSupabase} disabled={isLoading}>
-            <RefreshCw size={14} className={isLoadingSupabase ? "animate-spin" : ""} />
-            {isUsingSupabase ? "Refresh Supabase" : "Use Supabase Data"}
-          </Button>
+          
           
           <div className="relative">
             <input type="file" id="rdf-upload" className="hidden" onChange={handleFileUpload} accept=".ttl,.rdf,.n3" />
