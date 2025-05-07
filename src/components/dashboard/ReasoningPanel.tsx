@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export function ReasoningPanel() {
   const [query, setQuery] = useState("");
@@ -15,6 +16,7 @@ export function ReasoningPanel() {
     policy_area: string;
     question: string;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,24 +24,47 @@ export function ReasoningPanel() {
     if (!query.trim()) return;
     
     setLoading(true);
+    setError(null);
+    
+    // Create an AbortController to handle timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+    
     try {
       // Encode the query for URL
       const encodedQuery = encodeURIComponent(query);
-      const response = await fetch(`http://127.0.0.1:5050/analyze?query=${encodedQuery}`);
+      const response = await fetch(`http://127.0.0.1:5050/analyze?query=${encodedQuery}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error('Failed to analyze query');
+        throw new Error(`Failed to analyze query: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       setAnalysisResult(data);
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Error analyzing query:', error);
-      toast({
-        title: "Analysis Failed",
-        description: "Failed to analyze your query. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Handle different types of errors
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setError("Analysis timed out after 5 minutes. Please try a simpler query.");
+        toast({
+          title: "Analysis Timed Out",
+          description: "The analysis took too long to complete. Please try a simpler query.",
+          variant: "destructive",
+        });
+      } else {
+        setError("Failed to analyze query. Please ensure the analysis service is running.");
+        toast({
+          title: "Analysis Failed",
+          description: "Failed to analyze your query. Please check if the analysis service is running.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -79,6 +104,14 @@ export function ReasoningPanel() {
           </Button>
         </div>
       </form>
+      
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       {analysisResult ? (
         <div className="bg-white border rounded-md p-4 mt-4 max-h-[350px] overflow-y-auto">

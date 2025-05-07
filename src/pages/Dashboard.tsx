@@ -55,7 +55,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Reasoning Panel</CardTitle>
           </CardHeader>
-          <CardContent className="h-[500px] overflow-hidden flex flex-col">
+          <CardContent className="h-[600px] overflow-auto flex flex-col">
             <ReasoningPanel />
           </CardContent>
         </Card>
