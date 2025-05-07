@@ -51,11 +51,11 @@ export default function Dashboard() {
       </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="col-span-1">
+        <Card className="col-span-1 lg:col-span-1 lg:row-span-2">
           <CardHeader>
             <CardTitle>Reasoning Panel</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[500px] overflow-hidden flex flex-col">
             <ReasoningPanel />
           </CardContent>
         </Card>
@@ -64,7 +64,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Knowledge Graph</CardTitle>
           </CardHeader>
-          <CardContent className="h-[400px]">
+          <CardContent className="h-[500px]">
             <KnowledgeGraph />
           </CardContent>
         </Card>
