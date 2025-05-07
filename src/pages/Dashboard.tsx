@@ -9,7 +9,6 @@ import { ApprovalTimeAnalysis } from "@/components/dashboard/ApprovalTimeAnalysi
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { BillStatusTable } from "@/components/dashboard/BillStatusTable";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -63,15 +62,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Bill Status Table</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BillStatusTable />
-        </CardContent>
-      </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="col-span-1">
