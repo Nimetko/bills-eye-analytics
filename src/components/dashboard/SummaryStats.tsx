@@ -1,12 +1,40 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export function SummaryStats() {
+  const [totalBills, setTotalBills] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTotalBills() {
+      try {
+        const { count, error } = await supabase
+          .from('all_bills_uk')
+          .select('*', { count: 'exact', head: true });
+        
+        if (error) {
+          console.error('Error fetching bill count:', error);
+          return;
+        }
+        
+        setTotalBills(count);
+      } catch (error) {
+        console.error('Error fetching bill count:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchTotalBills();
+  }, []);
+
   const stats = [
     {
       title: "Total Bills",
-      value: "248",
+      value: loading ? "Loading..." : totalBills?.toString() || "0",
       change: "+12% from last period",
       icon: FileText,
       color: "text-blue-500",
