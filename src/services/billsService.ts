@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 
 export interface Bill {
@@ -98,14 +97,14 @@ export async function fetchApprovalTimeByPolicyArea(): Promise<ApprovalTimeData[
   }
 }
 
-// Get rejections count by policy area - UPDATED to use is_act instead of status
+// Get rejections count by policy area
 export async function fetchRejectionsByPolicyArea(): Promise<RejectionData[]> {
   try {
     // Fetch all bills
     const { data, error } = await supabase
       .from('all_bills_uk')
-      .select('policyArea, is_act')
-      .eq('is_act', false); // Filter for rejected bills (is_act = false)
+      .select('policyArea, isAct')
+      .eq('isAct', false); // Filter for rejected bills (isAct = false)
     
     if (error) {
       console.error('Error fetching rejections:', error);
