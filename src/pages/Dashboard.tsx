@@ -58,7 +58,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Knowledge Graph</CardTitle>
           </CardHeader>
-          <CardContent className="h-[700px]">
+          <CardContent className="h-[800px]">
             <KnowledgeGraph />
           </CardContent>
         </Card>

@@ -14,19 +14,6 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchBills, convertBillsToGraphData } from '@/services/billsService';
 import { useToast } from '@/components/ui/use-toast';
 
-// Force-directed graph simulation parameters
-type NodeWithPosition = Node & {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-};
-
-type EdgeWithNodes = Edge & {
-  sourceNode: NodeWithPosition;
-  targetNode: NodeWithPosition;
-};
-
 // Custom Parliament Bills Data
 const customTripletData: TripletData[] = [
   { object: "2nd_reading", predicate: "hasStatus", subject: "Bill3919" },
@@ -56,6 +43,20 @@ const customTripletData: TripletData[] = [
   { object: "Commons", predicate: "originatingHouse", subject: "Bill3919" }
 ];
 
+// Force-directed graph simulation parameters
+type NodeWithPosition = Node & {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  fixed?: boolean;
+};
+
+type EdgeWithNodes = Edge & {
+  sourceNode: NodeWithPosition;
+  targetNode: NodeWithPosition;
+};
+
 export function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeTab, setActiveTab] = useState<string>("entities");
@@ -64,6 +65,7 @@ export function KnowledgeGraph() {
   const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); 
   const [isUsingServer, setIsUsingServer] = useState<boolean>(false);
   const [isUsingCustomData, setIsUsingCustomData] = useState<boolean>(true);
+  const [simulationRunning, setSimulationRunning] = useState<boolean>(true);
   const { toast } = useToast();
   
   // Fetch bills from Supabase
@@ -159,6 +161,11 @@ export function KnowledgeGraph() {
     setIsUsingCustomData(false);
     refetchServer();
   };
+
+  // Toggle simulation
+  const toggleSimulation = () => {
+    setSimulationRunning(!simulationRunning);
+  };
   
   // Generate colors based on node type
   const getNodeColor = (node: Node) => {
@@ -172,7 +179,7 @@ export function KnowledgeGraph() {
   };
   
   const getNodeRadius = (node: Node) => {
-    return node.type === 'bill' ? 12 : 8;
+    return node.type === 'bill' ? 15 : 10;
   };
   
   // Force-directed graph rendering
@@ -188,13 +195,14 @@ export function KnowledgeGraph() {
       svgElement.removeChild(svgElement.firstChild);
     }
     
-    // Create a simple force-directed graph (in a real app, use D3.js or a similar library)
+    // Create a simple force-directed graph
     const nodes: NodeWithPosition[] = graphData.nodes.map(node => ({
       ...node,
-      x: Math.random() * width * 0.6 + width * 0.2, // Distribute more centrally
-      y: Math.random() * height * 0.6 + height * 0.2,
+      x: Math.random() * width * 0.8 + width * 0.1, // Better initial distribution
+      y: Math.random() * height * 0.8 + height * 0.1,
       vx: 0,
-      vy: 0
+      vy: 0,
+      fixed: false
     }));
     
     const nodeMap = new Map(nodes.map(node => [node.id, node]));
@@ -221,7 +229,7 @@ export function KnowledgeGraph() {
       
       // Add edge label - only show on hover to reduce clutter
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('font-size', '7px');
+      text.setAttribute('font-size', '9px');
       text.setAttribute('fill', '#666');
       text.setAttribute('opacity', '0');
       text.textContent = edge.label;
@@ -286,9 +294,9 @@ export function KnowledgeGraph() {
       
       // Add full label below node
       const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('font-size', node.type === 'bill' ? '10px' : '8px');
+      label.setAttribute('font-size', node.type === 'bill' ? '10px' : '9px');
       label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('dy', node.type === 'bill' ? '24px' : '16px');
+      label.setAttribute('dy', node.type === 'bill' ? '24px' : '18px');
       label.setAttribute('fill', '#333');
       
       // Truncate long labels
@@ -316,34 +324,107 @@ export function KnowledgeGraph() {
         label.setAttribute('opacity', '0.8');
       });
       
+      // Double-click to fix/unfix node position
+      group.addEventListener('dblclick', () => {
+        node.fixed = !node.fixed;
+        circle.setAttribute('stroke', node.fixed ? '#333' : 'none');
+        circle.setAttribute('stroke-width', node.fixed ? '2' : '0');
+      });
+      
+      // Dragging functionality
+      let isDragging = false;
+      
+      group.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        
+        const onMouseMove = (moveEvent: MouseEvent) => {
+          if (!isDragging) return;
+          
+          const rect = svgElement.getBoundingClientRect();
+          const x = moveEvent.clientX - rect.left;
+          const y = moveEvent.clientY - rect.top;
+          
+          node.x = x;
+          node.y = y;
+          node.fixed = true;
+          circle.setAttribute('stroke', '#333');
+          circle.setAttribute('stroke-width', '2');
+          
+          // Update node position
+          group.setAttribute('transform', `translate(${x},${y})`);
+          
+          // Update connected edges
+          edges.forEach(edge => {
+            if (edge.sourceNode === node || edge.targetNode === node) {
+              const line = edgesGroup.childNodes[edges.indexOf(edge) * 2] as SVGLineElement;
+              const text = edgesGroup.childNodes[edges.indexOf(edge) * 2 + 1] as SVGTextElement;
+              
+              line.setAttribute('x1', edge.sourceNode.x.toString());
+              line.setAttribute('y1', edge.sourceNode.y.toString());
+              line.setAttribute('x2', edge.targetNode.x.toString());
+              line.setAttribute('y2', edge.targetNode.y.toString());
+              
+              // Update label position
+              const midX = (edge.sourceNode.x + edge.targetNode.x) / 2;
+              const midY = (edge.sourceNode.y + edge.targetNode.y) / 2;
+              text.setAttribute('x', midX.toString());
+              text.setAttribute('y', midY.toString());
+            }
+          });
+        };
+        
+        const onMouseUp = () => {
+          isDragging = false;
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      });
+      
       nodesGroup.appendChild(group);
       
       // Add node data as attributes for later reference
       group.dataset.nodeId = node.id;
     });
     
-    // Simple physics simulation
+    // Simple physics simulation - with reduced forces for stability
     let animationId: number;
     const simulation = () => {
+      if (!simulationRunning) {
+        animationId = requestAnimationFrame(simulation);
+        return;
+      }
+      
       // Update node positions with simple force-directed algorithm
-      const repulsionForce = 0.8;
-      const attractionForce = 0.01;
-      const centerForce = 0.01;
+      // Reduced force values for more stability
+      const repulsionForce = 0.4;  // Reduced from 0.8
+      const attractionForce = 0.005; // Reduced from 0.01
+      const centerForce = 0.002;    // Reduced from 0.01
       
       // Apply repulsion between nodes
       for (let i = 0; i < nodes.length; i++) {
+        const nodeA = nodes[i];
+        if (nodeA.fixed) continue; // Skip fixed nodes
+        
         for (let j = i + 1; j < nodes.length; j++) {
-          const nodeA = nodes[i];
           const nodeB = nodes[j];
+          if (nodeB.fixed) continue; // Skip fixed nodes
+          
           const dx = nodeB.x - nodeA.x;
           const dy = nodeB.y - nodeA.y;
           const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = repulsionForce / (distance * distance);
           
-          nodeA.vx -= dx * force / distance;
-          nodeA.vy -= dy * force / distance;
-          nodeB.vx += dx * force / distance;
-          nodeB.vy += dy * force / distance;
+          // Apply a minimum distance to prevent extreme forces
+          const effectiveDistance = Math.max(distance, 40);
+          const force = repulsionForce / (effectiveDistance * effectiveDistance);
+          
+          nodeA.vx -= dx * force / effectiveDistance;
+          nodeA.vy -= dy * force / effectiveDistance;
+          nodeB.vx += dx * force / effectiveDistance;
+          nodeB.vy += dy * force / effectiveDistance;
         }
       }
       
@@ -351,32 +432,56 @@ export function KnowledgeGraph() {
       edges.forEach(edge => {
         const sourceNode = edge.sourceNode;
         const targetNode = edge.targetNode;
+        
+        // Skip if either node is fixed
+        if (sourceNode.fixed && targetNode.fixed) return;
+        
         const dx = targetNode.x - sourceNode.x;
         const dy = targetNode.y - sourceNode.y;
         const distance = Math.sqrt(dx * dx + dy * dy) || 1;
         
-        sourceNode.vx += dx * attractionForce;
-        sourceNode.vy += dy * attractionForce;
-        targetNode.vx -= dx * attractionForce;
-        targetNode.vy -= dy * attractionForce;
+        // Apply optimal distance for edge length
+        const optimalDistance = 120; // Desired distance between connected nodes
+        const forceFactor = (distance - optimalDistance) * 0.001;
+        
+        if (!sourceNode.fixed) {
+          sourceNode.vx += dx * forceFactor;
+          sourceNode.vy += dy * forceFactor;
+        }
+        
+        if (!targetNode.fixed) {
+          targetNode.vx -= dx * forceFactor;
+          targetNode.vy -= dy * forceFactor;
+        }
       });
       
-      // Apply center force
+      // Apply center force - gently pull nodes toward center
       nodes.forEach(node => {
+        if (node.fixed) return; // Skip fixed nodes
+        
         node.vx += (width / 2 - node.x) * centerForce;
         node.vy += (height / 2 - node.y) * centerForce;
       });
       
       // Update positions and apply dampening
       nodes.forEach(node => {
-        node.vx *= 0.9;
-        node.vy *= 0.9;
+        if (node.fixed) return; // Skip fixed nodes
+        
+        // Strong dampening for more stability
+        node.vx *= 0.7; // More dampening (was 0.9)
+        node.vy *= 0.7;
+        
+        // Apply velocity with limits
+        const maxVelocity = 2.0; // Limit maximum velocity
+        node.vx = Math.max(-maxVelocity, Math.min(maxVelocity, node.vx));
+        node.vy = Math.max(-maxVelocity, Math.min(maxVelocity, node.vy));
+        
         node.x += node.vx;
         node.y += node.vy;
         
         // Keep nodes within bounds
-        node.x = Math.max(20, Math.min(width - 20, node.x));
-        node.y = Math.max(20, Math.min(height - 20, node.y));
+        node.x = Math.max(30, Math.min(width - 30, node.x));
+        node.y = Math.max(30, Math.min(height - 30, node.y));
       });
       
       // Update SVG elements
@@ -433,7 +538,7 @@ export function KnowledgeGraph() {
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [graphData, hoveredNode]);
+  }, [graphData, hoveredNode, simulationRunning]);
 
   const isLoading = isLoadingSupabase || isLoadingServer || (graphData.nodes.length === 0 && isUsingCustomData);
   const error = supabaseError || serverError;
@@ -456,6 +561,15 @@ export function KnowledgeGraph() {
         
         <div className="flex-grow"></div>
         
+        <Button 
+          variant={simulationRunning ? "destructive" : "outline"} 
+          size="sm" 
+          className="flex items-center gap-1"
+          onClick={toggleSimulation}
+        >
+          {simulationRunning ? "Pause Graph" : "Resume Graph"}
+        </Button>
+        
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
@@ -467,7 +581,7 @@ export function KnowledgeGraph() {
             <Database size={14} />
             {isUsingCustomData ? "Refresh Bills Data" : "Use Bills Data"}
           </Button>
-
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -530,6 +644,7 @@ export function KnowledgeGraph() {
               : isUsingCustomData
               ? "Interactive visualization of custom Parliament Bills data"
               : "Interactive visualization of bills and their relationships"}
+            {!simulationRunning && " (paused)"}
           </p>
           
           <div className="bg-gray-50 rounded-md flex-1 overflow-hidden">
@@ -550,7 +665,7 @@ export function KnowledgeGraph() {
           </div>
           
           <p className="text-xs text-gray-400 mt-2 text-center">
-            Hover over nodes and connections to explore relationships
+            Hover over nodes and connections to explore relationships. Double-click any node to fix its position.
           </p>
         </>
       )}
