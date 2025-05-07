@@ -2,7 +2,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SummaryStats } from "@/components/dashboard/SummaryStats";
 import { RejectionsByPolicyArea } from "@/components/dashboard/RejectionsByPolicyArea";
-import { ApprovalTimeAnalysis } from "@/components/dashboard/ApprovalTimeAnalysis";
 import { ReasoningPanel } from "@/components/dashboard/ReasoningPanel";
 import { KnowledgeGraph } from "@/components/dashboard/KnowledgeGraph";
 import { BillStatusTable } from "@/components/dashboard/BillStatusTable";
@@ -45,25 +44,14 @@ export default function Dashboard() {
       
       <BillStatusTable />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle>Rejections by Policy Area</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RejectionsByPolicyArea />
-          </CardContent>
-        </Card>
-        
-        <Card className="col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle>Approval Time Analysis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ApprovalTimeAnalysis />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Rejections by Policy Area</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RejectionsByPolicyArea />
+        </CardContent>
+      </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="col-span-1">
