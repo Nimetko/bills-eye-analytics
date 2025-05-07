@@ -611,10 +611,7 @@ export function KnowledgeGraph() {
             {isUsingCustomData ? "Refresh Bills Data" : "Use Bills Data"}
           </Button>
           
-          <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleUseServerData} disabled={isLoading}>
-            <RefreshCw size={14} className={isLoadingServer ? "animate-spin" : ""} />
-            {isUsingServer ? "Refresh Server Data" : "Use Server Data"}
-          </Button>
+          
           
           
           
