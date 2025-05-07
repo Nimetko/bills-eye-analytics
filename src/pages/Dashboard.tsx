@@ -41,12 +41,14 @@ export default function Dashboard() {
       
       <SummaryStats />
       
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle>Rejections by Policy Area</CardTitle>
         </CardHeader>
-        <CardContent>
-          <RejectionsByPolicyArea />
+        <CardContent className="pt-0">
+          <div className="h-[450px]">
+            <RejectionsByPolicyArea />
+          </div>
         </CardContent>
       </Card>
       

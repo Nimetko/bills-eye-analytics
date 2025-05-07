@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from 'react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import { fetchRejectionsByPolicyArea } from '@/services/billsService';
 import { RejectionData } from '@/services/billsService';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,8 +11,11 @@ export function RejectionsByPolicyArea() {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
-  // Colors for the bars
-  const colors = ['#9333ea', '#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff'];
+  // Enhanced color palette for better visual distinction
+  const colors = [
+    '#9333ea', '#a855f7', '#b066f7', '#c084fc', 
+    '#d8b4fe', '#e9d5ff', '#f3e8ff', '#f5f3ff'
+  ];
   
   useEffect(() => {
     async function loadRejectionData() {
@@ -25,10 +27,12 @@ export function RejectionsByPolicyArea() {
         const sortedData = rejectionData
           .sort((a, b) => b.value - a.value)
           .slice(0, 8)
-          // Truncate long policy area names for better display
+          // Process policy area names for better display
           .map(item => ({
             ...item,
-            name: item.name.length > 15 ? `${item.name.substring(0, 15)}...` : item.name
+            // Keep full name but limit display if needed
+            fullName: item.name,
+            name: item.name.length > 20 ? `${item.name.substring(0, 18)}...` : item.name
           }));
           
         setData(sortedData);
@@ -68,24 +72,42 @@ export function RejectionsByPolicyArea() {
     );
   }
 
-  // Adjust the chart layout based on screen size
-  const chartMargin = isMobile
-    ? { top: 10, right: 10, left: 0, bottom: 80 }
-    : { top: 20, right: 20, left: 20, bottom: 100 };
-
-  const xAxisProps = isMobile
-    ? {
-        height: 120,
+  // Responsive configuration based on screen size
+  const chartConfig = {
+    small: {
+      margin: { top: 10, right: 10, left: 0, bottom: 80 },
+      barSize: 20,
+      xAxis: {
         angle: -60,
         dy: 20,
         fontSize: 10,
+        height: 120
       }
-    : {
-        height: 120,
+    },
+    medium: {
+      margin: { top: 20, right: 20, left: 20, bottom: 80 },
+      barSize: 30,
+      xAxis: {
         angle: -45,
         dy: 15,
         fontSize: 12,
-      };
+        height: 100
+      }
+    },
+    large: {
+      margin: { top: 20, right: 30, left: 30, bottom: 60 },
+      barSize: 40,
+      xAxis: {
+        angle: -30,
+        dy: 10,
+        fontSize: 12,
+        height: 80
+      }
+    }
+  };
+  
+  // Select the appropriate configuration based on screen size
+  const config = isMobile ? chartConfig.small : window.innerWidth < 1200 ? chartConfig.medium : chartConfig.large;
   
   return (
     <div className="h-[400px]">
@@ -100,40 +122,41 @@ export function RejectionsByPolicyArea() {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={chartMargin}
-            barSize={isMobile ? 20 : 28}
+            margin={config.margin}
+            barSize={config.barSize}
           >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
             <XAxis 
               dataKey="name"
               tick={{ 
-                fontSize: xAxisProps.fontSize,
-                width: 80,
-                // Remove the invalid textOverflow property
-                // Use a combination of valid SVG properties instead
+                fontSize: config.xAxis.fontSize,
+                fill: "#4b5563", // text-gray-600 equivalent
+                fontWeight: 500
               }}
               tickLine={false}
-              axisLine={false}
-              angle={xAxisProps.angle}
+              axisLine={{ stroke: '#e5e7eb' }}
+              angle={config.xAxis.angle}
               textAnchor="end"
-              height={xAxisProps.height}
-              dy={xAxisProps.dy}
+              height={config.xAxis.height}
+              dy={config.xAxis.dy}
               interval={0}
             />
             <YAxis 
               tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 12 }}
-              width={isMobile ? 30 : 45}
+              axisLine={{ stroke: '#e5e7eb' }}
+              tick={{ fontSize: 12, fill: "#4b5563" }}
+              width={45}
             />
             <ChartTooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
+                  const item = payload[0].payload;
                   return (
                     <ChartTooltipContent>
-                      <p className="font-medium">{payload[0].payload.name}</p>
+                      <p className="font-medium">{item.fullName || item.name}</p>
                       <p className="text-sm text-muted-foreground">
                         <span className="font-medium text-foreground">
-                          {payload[0].value}
+                          {item.value}
                         </span> bills rejected
                       </p>
                     </ChartTooltipContent>
@@ -142,7 +165,7 @@ export function RejectionsByPolicyArea() {
                 return null;
               }}
             />
-            <Bar dataKey="value" name="Rejected Bills">
+            <Bar dataKey="value" name="Rejected Bills" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
