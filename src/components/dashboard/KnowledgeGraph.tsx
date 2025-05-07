@@ -1,11 +1,20 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
-import { demoGraphData, KnowledgeGraphData, Node, Edge, fetchGraphData } from '@/services/KnowledgeGraphData';
+import { 
+  demoGraphData, 
+  KnowledgeGraphData, 
+  Node, 
+  Edge, 
+  fetchGraphData, 
+  parseTripletToGraphData,
+  TripletData
+} from '@/services/KnowledgeGraphData';
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, RefreshCw } from "lucide-react";
+import { FileText, Upload, RefreshCw, Database } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { fetchBills, convertBillsToGraphData } from '@/services/billsService';
+import { useToast } from '@/components/ui/use-toast';
 
 // Force-directed graph simulation parameters
 type NodeWithPosition = Node & {
@@ -27,6 +36,8 @@ export function KnowledgeGraph() {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [isUsingSupabase, setIsUsingSupabase] = useState<boolean>(false); 
   const [isUsingServer, setIsUsingServer] = useState<boolean>(false);
+  const [isUsingTriplets, setIsUsingTriplets] = useState<boolean>(false);
+  const { toast } = useToast();
   
   // Fetch bills from Supabase
   const { data: bills, isLoading: isLoadingSupabase, error: supabaseError, refetch } = useQuery({
@@ -61,6 +72,7 @@ export function KnowledgeGraph() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsUsingSupabase(false);
     setIsUsingServer(false);
+    setIsUsingTriplets(false);
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -69,16 +81,54 @@ export function KnowledgeGraph() {
         import('@/services/KnowledgeGraphData').then(module => {
           const parsedData = module.parseRDFToGraphData(text);
           setGraphData(parsedData);
+          toast({
+            title: "Data loaded",
+            description: `Loaded ${parsedData.nodes.length} nodes and ${parsedData.edges.length} edges from file`,
+          });
         });
       };
       reader.readAsText(file);
     }
   };
   
+  // Load JSON triplet data
+  const handleLoadTripletData = () => {
+    setIsUsingSupabase(false);
+    setIsUsingServer(false);
+    setIsUsingTriplets(true);
+    
+    // For demo purposes, fetch from a static JSON file
+    // In a real implementation, this would be from an API endpoint
+    fetch('/api/triplet-data')
+      .then(response => response.json())
+      .catch(() => {
+        // Fallback to sample data if fetch fails
+        console.log("Using embedded triplet data");
+        return sampleTripletData;
+      })
+      .then((data: TripletData[]) => {
+        const parsedData = parseTripletToGraphData(data);
+        setGraphData(parsedData);
+        toast({
+          title: "Triplet data loaded",
+          description: `Loaded ${parsedData.nodes.length} nodes and ${parsedData.edges.length} edges from triplet data`,
+        });
+      })
+      .catch(err => {
+        console.error("Error processing triplet data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to process triplet data",
+          variant: "destructive",
+        });
+      });
+  };
+  
   // Switch to Supabase data
   const handleUseSupabase = () => {
     setIsUsingSupabase(true);
     setIsUsingServer(false);
+    setIsUsingTriplets(false);
     refetch();
   };
   
@@ -86,6 +136,7 @@ export function KnowledgeGraph() {
   const handleUseServerData = () => {
     setIsUsingServer(true);
     setIsUsingSupabase(false);
+    setIsUsingTriplets(false);
     refetchServer();
   };
   
@@ -367,6 +418,31 @@ export function KnowledgeGraph() {
   const isLoading = isLoadingSupabase || isLoadingServer;
   const error = supabaseError || serverError;
 
+  // Sample triplet data embedded for demonstration
+  const sampleTripletData: TripletData[] = [
+    {
+      "subject": "Bill3082",
+      "predicate": "belongsTo",
+      "object": "Education"
+    },
+    {
+      "subject": "Bill3134",
+      "predicate": "hasStatus",
+      "object": "2nd_reading"
+    },
+    // ... more sample data would go here in a real implementation
+    {
+      "subject": "Bill3134",
+      "predicate": "isRejected",
+      "object": "true"
+    },
+    {
+      "subject": "Bill3208",
+      "predicate": "currentHouse",
+      "object": "Commons"
+    }
+  ];
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex space-x-2 mb-4">
@@ -386,6 +462,17 @@ export function KnowledgeGraph() {
         <div className="flex-grow"></div>
         
         <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={handleLoadTripletData}
+            disabled={isLoading}
+          >
+            <Database size={14} />
+            {isUsingTriplets ? "Refresh Triplet Data" : "Use Triplet Data"}
+          </Button>
+
           <Button 
             variant="outline" 
             size="sm" 
@@ -445,6 +532,8 @@ export function KnowledgeGraph() {
               ? "Interactive visualization of parliamentary bills from Supabase database"
               : isUsingServer
               ? "Interactive visualization of knowledge graph from server API"
+              : isUsingTriplets
+              ? "Interactive visualization of triplet data showing bills and their relationships"
               : "Interactive visualization of bills and their relationships"}
           </p>
           

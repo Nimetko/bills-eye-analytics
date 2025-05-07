@@ -118,6 +118,83 @@ export function parseRDFToGraphData(rdfData: string): KnowledgeGraphData {
   return { nodes, edges };
 }
 
+// New function to parse the JSON triplet format
+export interface TripletData {
+  subject: string;
+  predicate: string;
+  object: string;
+}
+
+export function parseTripletToGraphData(triplets: TripletData[]): KnowledgeGraphData {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+  const nodesMap = new Map<string, Node>();
+  
+  // Process all triplets
+  for (const triplet of triplets) {
+    const { subject, predicate, object } = triplet;
+    
+    // Add subject node if it doesn't exist
+    if (!nodesMap.has(subject)) {
+      // All subjects in our data are bills
+      const node: Node = { 
+        id: subject, 
+        label: subject.replace(/([A-Z])/g, ' $1').trim(), // Add spaces between words
+        type: 'bill'
+      };
+      nodesMap.set(subject, node);
+      nodes.push(node);
+    }
+    
+    // For boolean values like "true" or "false", create a property node
+    if (object === 'true' || object === 'false') {
+      const propertyId = `${predicate}_${object}`;
+      if (!nodesMap.has(propertyId)) {
+        const propertyLabel = `${predicate.charAt(0).toUpperCase() + predicate.slice(1).replace(/([A-Z])/g, ' $1')} ${object}`;
+        const node: Node = { id: propertyId, label: propertyLabel, type: 'property' };
+        nodesMap.set(propertyId, node);
+        nodes.push(node);
+      }
+      
+      // Add edge from subject to this property
+      edges.push({
+        source: subject,
+        target: propertyId,
+        label: predicate
+      });
+    } else {
+      // Add object node if it doesn't exist
+      if (!nodesMap.has(object)) {
+        let type: Node['type'] = 'property';
+        if (object === 'Commons' || object === 'Lords' || object === 'Unassigned') {
+          type = 'house';
+        } else if (object.includes('reading') || object.includes('stage') || object === 'Royal_Assent') {
+          type = 'status';
+        } else if (['Education', 'Health', 'Defense', 'Economy', 'Environment', 'Transport'].includes(object)) {
+          type = 'policyArea';
+        }
+        
+        const node: Node = { 
+          id: object, 
+          label: object.replace(/_/g, ' '), 
+          type 
+        };
+        nodesMap.set(object, node);
+        nodes.push(node);
+      }
+      
+      // Add the edge from subject to object
+      edges.push({
+        source: subject,
+        target: object,
+        label: predicate
+      });
+    }
+  }
+  
+  return { nodes, edges };
+}
+
 // Function to fetch graph data from server
 export async function fetchGraphData(): Promise<KnowledgeGraphData> {
   try {
