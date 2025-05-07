@@ -4,37 +4,79 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
+interface BillStats {
+  totalBills: number;
+  approved: number;
+  rejected: number;
+  inProcess: number;
+}
+
 export function SummaryStats() {
-  const [totalBills, setTotalBills] = useState<number | null>(null);
+  const [stats, setStats] = useState<BillStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchTotalBills() {
+    async function fetchBillStats() {
       try {
-        const { count, error } = await supabase
+        // Get total bill count
+        const { count: totalCount, error: countError } = await supabase
           .from('all_bills_uk')
           .select('*', { count: 'exact', head: true });
         
-        if (error) {
-          console.error('Error fetching bill count:', error);
+        if (countError) {
+          console.error('Error fetching bill count:', countError);
           return;
         }
         
-        setTotalBills(count);
+        // Get approved bills (isAct = true)
+        const { count: approvedCount, error: approvedError } = await supabase
+          .from('all_bills_uk')
+          .select('*', { count: 'exact', head: true })
+          .eq('isAct', true);
+        
+        if (approvedError) {
+          console.error('Error fetching approved bills:', approvedError);
+          return;
+        }
+        
+        // Get rejected bills (isDefeated = true)
+        const { count: rejectedCount, error: rejectedError } = await supabase
+          .from('all_bills_uk')
+          .select('*', { count: 'exact', head: true })
+          .eq('isDefeated', true);
+        
+        if (rejectedError) {
+          console.error('Error fetching rejected bills:', rejectedError);
+          return;
+        }
+        
+        // Calculate in process bills
+        const inProcessCount = totalCount - (approvedCount + rejectedCount);
+        
+        setStats({
+          totalBills: totalCount || 0,
+          approved: approvedCount || 0,
+          rejected: rejectedCount || 0,
+          inProcess: inProcessCount || 0
+        });
       } catch (error) {
-        console.error('Error fetching bill count:', error);
+        console.error('Error fetching bill stats:', error);
       } finally {
         setLoading(false);
       }
     }
     
-    fetchTotalBills();
+    fetchBillStats();
   }, []);
 
-  const stats = [
+  // Calculate percentages
+  const approvalRate = stats ? Math.round((stats.approved / stats.totalBills) * 100) : 0;
+  const rejectionRate = stats ? Math.round((stats.rejected / stats.totalBills) * 100) : 0;
+  
+  const summaryStats = [
     {
       title: "Total Bills",
-      value: loading ? "Loading..." : totalBills?.toString() || "0",
+      value: loading ? "Loading..." : stats?.totalBills.toString() || "0",
       change: "+12% from last period",
       icon: FileText,
       color: "text-blue-500",
@@ -48,14 +90,14 @@ export function SummaryStats() {
     },
     {
       title: "Rejection Rate",
-      value: "23%",
+      value: loading ? "Loading..." : `${rejectionRate}%`,
       change: "-3% from last period",
       icon: AlertTriangle,
       color: "text-red-500",
     },
     {
       title: "Approval Rate",
-      value: "68%",
+      value: loading ? "Loading..." : `${approvalRate}%`,
       change: "+5% from last period",
       icon: CheckCircle,
       color: "text-green-500",
@@ -64,7 +106,7 @@ export function SummaryStats() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat, index) => (
+      {summaryStats.map((stat, index) => (
         <Card key={index}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
